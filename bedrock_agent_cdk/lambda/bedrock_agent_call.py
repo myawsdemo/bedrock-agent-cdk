@@ -4,11 +4,13 @@ import boto3
 print("boto3 version:" + boto3.__version__)
 
 agent = boto3.client('bedrock-agent-runtime')
-accept = 'application/json'
-contentType = 'application/json'
 
 
 def lambda_handler(event, context):
+    body = json.loads(event['body'])
+
+    print(body)
+
     response = agent.invoke_agent(
         sessionState={
             'sessionAttributes': {
@@ -20,19 +22,21 @@ def lambda_handler(event, context):
         },
         agentId='DTSC5QHP98',
         agentAliasId='UK0FRQTLMZ',
-        sessionId='session998',
-        endSession=True,
-        enableTrace=False,
-        inputText='谢谢'
+        sessionId=body['sessionId'],
+        endSession=body['endSession'],
+        enableTrace=body['enableTrace'],
+        inputText=body['inputText']
     )
     event_stream = response['completion']
+    print(response)
+    msg = ''
     for event in event_stream:
         if 'chunk' in event:
-            data = event['chunk']['bytes'].decode("utf-8")
-            print(data)
+            msg += event['chunk']['bytes'].decode("utf-8")
+    print(msg)
 
     # TODO implement
     return {
         'statusCode': 200,
-        'body': response
+        'body': msg
     }

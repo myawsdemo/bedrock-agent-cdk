@@ -2,7 +2,7 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
     aws_iam as iam,
-    aws_apigateway as api_gateway,
+    aws_apigateway as _apigateway,
     Duration
 )
 from constructs import Construct
@@ -42,19 +42,22 @@ class BedrockAgentCdkStack(Stack):
                                     function_name='Bedrock_Agent_Call',
                                     timeout=Duration.seconds(120)
                                     )
-        gateway = api_gateway.RestApi(
+        bedrock_api = _apigateway.RestApi(
             self, "bedrock-api",
             rest_api_name="BedrockApi",
             description="Bedrock API Gateway",
+            deploy=True,
+            deploy_options=_apigateway.StageOptions(stage_name='prod')
         )
 
-        apiKey = api_gateway.ApiKey(
-            self, 'MyBedrockAPIKey', api_key_name='bedrock-api-key', enabled=True, description='api gateway key'
+        chat_path = bedrock_api.root.add_resource(
+            path_part='chat', default_method_options=_apigateway.MethodOptions(api_key_required=True)
         )
 
-        chat_path = gateway.root.add_resource(
-            path_part='chat', default_method_options=api_gateway.MethodOptions(api_key_required=True)
-        )
-
-        integration = api_gateway.LambdaIntegration(function)
+        integration = _apigateway.LambdaIntegration(function)
         chat_path.add_method("POST", integration, request_parameters={"method.request.header.Content-Type": True})
+
+        usage_plan = bedrock_api.add_usage_plan("BedrockAPIUsagePlan", name="myPlan")
+        usage_plan.add_api_stage(stage=bedrock_api.deployment_stage)
+        api_key = bedrock_api.add_api_key('MyBedrockAPIKey')
+        usage_plan.add_api_key(api_key)
