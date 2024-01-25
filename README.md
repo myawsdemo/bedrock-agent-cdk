@@ -61,7 +61,8 @@ Create Boto3 Layer:
 Important: The following AWS CLI commands work for Linux, Unix, and macOS operating systems. In each command, make sure that you replace boto3-mylayer with your preferred name for the lib folder and Lambda layer.
 1. Create a lib folder:
 ```shell
-LIB_DIR=boto3-mylayer/pythonmkdir -p $LIB_DIR
+LIB_DIR=boto3-mylayer/python
+mkdir -p $LIB_DIR
 ```
 2. Install the library to LIB_DIR:
 ```shell
@@ -69,7 +70,8 @@ pip3 install boto3 -t $LIB_DIR
 ```
 3. Zip all the dependencies to /tmp/boto3-mylayer.zip:
 ```shell
-cd boto3-mylayerzip -r /tmp/boto3-mylayer.zip .
+cd boto3-mylayer
+zip -r /tmp/boto3-mylayer.zip .
 ```
 4. Publish the layer:
 ```shell
