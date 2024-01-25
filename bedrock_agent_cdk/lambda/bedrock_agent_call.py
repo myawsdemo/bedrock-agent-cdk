@@ -21,7 +21,7 @@ def lambda_handler(event, context):
             }
         },
         agentId='DTSC5QHP98',
-        agentAliasId='UK0FRQTLMZ',
+        agentAliasId='BL23NH1CZC',
         sessionId=body['sessionId'],
         endSession=body['endSession'],
         enableTrace=body['enableTrace'],
