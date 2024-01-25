@@ -13,6 +13,7 @@ class BedrockAgentCdkStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # 需要先通过readme中写的内容创建boto3 layer，然后将ARN放到下面
         layer_arn = "arn:aws:lambda:us-east-1:715371302281:layer:boto3-mylayer:1"
 
         # 引用已有的 Lambda Layer
@@ -50,12 +51,39 @@ class BedrockAgentCdkStack(Stack):
             deploy_options=_apigateway.StageOptions(stage_name='prod')
         )
 
+        request_validator = _apigateway.RequestValidator(self,
+                                                         id="bedrock-request-validator",
+                                                         rest_api=bedrock_api,
+                                                         request_validator_name="RequestBodyValidator",
+                                                         validate_request_body=True)
+
+        from aws_cdk.aws_apigateway import JsonSchemaType
+        request_model = _apigateway.Model(self,
+                                          id="modelValidator",
+                                          model_name="modelValidator",
+                                          rest_api=bedrock_api,
+                                          content_type="application/json",
+                                          description="To validate the request body",
+                                          schema={
+                                              "type": JsonSchemaType.OBJECT,
+                                              "properties": {
+                                                  "sessionId": {"type": JsonSchemaType.STRING, "minLength": 1},
+                                                  "inputText": {"type": JsonSchemaType.STRING, "minLength": 1},
+                                                  "enableTrace": {"type": JsonSchemaType.BOOLEAN},
+                                                  "endSession": {"type": JsonSchemaType.BOOLEAN}
+                                              },
+                                              "required": ["sessionId", "inputText", "enableTrace", "endSession"]
+                                          })
+
         chat_path = bedrock_api.root.add_resource(
             path_part='chat', default_method_options=_apigateway.MethodOptions(api_key_required=True)
         )
 
         integration = _apigateway.LambdaIntegration(function)
-        chat_path.add_method("POST", integration, request_parameters={"method.request.header.Content-Type": True})
+        chat_path.add_method("POST", integration,
+                             request_parameters={"method.request.header.Content-Type": True},
+                             request_validator=request_validator,
+                             request_models={"application/json": request_model})
 
         usage_plan = bedrock_api.add_usage_plan("BedrockAPIUsagePlan", name="myPlan")
         usage_plan.add_api_stage(stage=bedrock_api.deployment_stage)
